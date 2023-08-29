@@ -16,22 +16,28 @@ public class Player : MonoBehaviour
     private GameObject tripleLaserPrefab;
     [SerializeField]
     private Transform shootPoint;
+
     [SerializeField]
     private float fireRate = .5f;
     private float nextFire = -1f;
+
     [SerializeField]
     private int lives = 3;
-    [SerializeField]
+
     private bool isTripleShotActive = false;
-    [SerializeField]
     private bool isSpeedBoostActive = false;
-    [SerializeField]
     private bool isShieldBoostActive = false;
+    
     private SpawnManager spawnManager;
+    private UIManager uiManager;
+
+    [SerializeField]
+    private int score = 0;
     // Start is called before the first frame update
     void Start()
     {
         spawnManager = GameObject.Find("SpawnManager").GetComponent<SpawnManager>();
+        uiManager = GameObject.Find("UI_Manager").GetComponent<UIManager>();
         gameObject.transform.position = new Vector3(0,0, 0);
     }
 
@@ -40,6 +46,13 @@ public class Player : MonoBehaviour
     {
         CalculateMovement();
         Shoot();
+        ActiveShield();
+    }
+
+    private void ActiveShield()
+    {
+        Transform shield = gameObject.transform.GetChild(1);
+        shield.gameObject.SetActive(isShieldBoostActive);
     }
 
     private void Shoot()
@@ -65,14 +78,9 @@ public class Player : MonoBehaviour
 
 
         Vector3 direction = new Vector3(horizontalInput, verticaltInput, 0);
-        if(!isSpeedBoostActive)
-        {
-            transform.Translate(direction * speed * Time.deltaTime);
-        }
-        else
-        {
-            transform.Translate(direction * (speed * speedBoost) * Time.deltaTime);
-        }
+
+        transform.Translate(direction * speed * Time.deltaTime);
+
         if (transform.position.y >= 5)
         {
             transform.position = new Vector3(transform.position.x, 5, 0);
@@ -96,7 +104,14 @@ public class Player : MonoBehaviour
 
     public void Damage()
     {
+        if (isShieldBoostActive)
+        {
+            isShieldBoostActive = false;
+            return;
+        }
+
         lives--;
+        uiManager.UpddateLives(lives);
         if(lives <= 0)
         {
             if (spawnManager != null) spawnManager.OnPlayerDeath();
@@ -118,6 +133,7 @@ public class Player : MonoBehaviour
     public void SpeedBoostActive()
     {
         isSpeedBoostActive = true;
+        speed *= speedBoost;
         StartCoroutine(SpeedBoostPowerDownRoutine());
     }
 
@@ -125,17 +141,23 @@ public class Player : MonoBehaviour
     {
         yield return new WaitForSeconds(5);
         isSpeedBoostActive = false;
+        speed /= speedBoost;
     }
 
     public void ShieldBoostActive()
     {
         isShieldBoostActive = true;
-        StartCoroutine(ShieldBoostPowerDownRoutine());
     }
 
-    IEnumerator ShieldBoostPowerDownRoutine()
+    public void IncreaseScore()
     {
-        yield return new WaitForSeconds(5);
-        isShieldBoostActive = false;
+        score += 10;
+        uiManager.DisplayScore(score);
     }
+
+    public int GetPlayerScore()
+    {
+        return score;
+    }
+
 }
